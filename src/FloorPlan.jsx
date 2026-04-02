@@ -6,7 +6,8 @@ import amariImg from "./assets/Amari_4_light_qsp4eu.png";
 import slimImg from "./assets/slim_floodlight_runedf.png";
 import supernovaImg from "./assets/Supernova_onix7z.png";
 
-const GEMINI_KEY = "AIzaSyDXbw3u9aeREZEBXPUfGh3qj6NT6PX3hd8";
+const GEMINI_KEY = import.meta.env.VITE_REACT_APP_GEMINI_KEY;
+const CLAUDE_API_KEY = import.meta.env.VITE_REACT_APP_CLAUDE_API_KEY;
 
 const LIGHTS = [
     { id: "batten", label: "Batten UK", src: battenImg },
