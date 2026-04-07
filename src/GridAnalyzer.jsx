@@ -9,7 +9,7 @@ The user has uploaded a floor plan image. Your job is to:
 2. Estimate their pixel X coordinates (left-to-right) in the image.
 3. Ask the user what real-world distance (in cm) the two points represent — OR if they've provided it, use that value.
 4. Calculate:
-   - px_per_cm = pixel_distance / real_distance_cm
+   - px_per_cm  = pixel_distance / real_distance_cm
    - grid_50cm_px = px_per_cm * 50
 5. Return a JSON response ONLY (no markdown, no explanation outside the JSON) in this exact format:
 

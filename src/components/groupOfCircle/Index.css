@@ -1,0 +1,541 @@
+.react-resizable {
+    position: relative;
+}
+
+.react-resizable-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-repeat: no-repeat;
+    background-origin: content-box;
+    box-sizing: border-box;
+    /* background-image: url('../../assets/img/resize_gw.svg'); */
+    background-position: bottom right;
+    padding: 0 3px 3px 0;
+}
+
+.react-resizable-handle-sw {
+    bottom: 0;
+    left: 0;
+    cursor: sw-resize;
+    transform: rotate(90deg);
+}
+
+.react-resizable-handle-se {
+    display: none;
+    bottom: 0;
+    right: 0;
+    /* cursor: se-resize; */
+}
+
+.react-resizable-handle-nw {
+    top: 0;
+    left: 0;
+    cursor: nw-resize;
+    transform: rotate(180deg);
+}
+
+.react-resizable-handle-ne {
+    top: 0;
+    right: 0;
+    cursor: ne-resize;
+    transform: rotate(270deg);
+}
+
+.react-resizable-handle-w,
+.react-resizable-handle-e {
+    top: 50%;
+    margin-top: -10px;
+    cursor: ew-resize;
+}
+
+.react-resizable-handle-w {
+    left: 0;
+    transform: rotate(135deg);
+}
+
+.react-resizable-handle-e {
+    right: 0;
+    transform: rotate(315deg);
+}
+
+.react-resizable-handle-n,
+.react-resizable-handle-s {
+    left: 50%;
+    margin-left: -10px;
+    cursor: ns-resize;
+}
+
+.react-resizable-handle-n {
+    top: 0;
+    transform: rotate(225deg);
+}
+
+.react-resizable-handle-s {
+    bottom: 0;
+    transform: rotate(45deg);
+}
+
+/* /////////////////////////////////////////////////////////// */
+
+
+/* * .react-resizable {
+    position: relative;
+} */
+
+
+/* .react-resizable-handle {
+    position: absolute;
+    width: 31px !important;
+    height: 30px !important;
+    bottom: -32px;
+    /* left: 65px; */
+/* left: -28px; */
+/* background: url('../../assets/img/resize_lightset_icon2.png') no-repeat; */
+/* background-size: contain;
+cursor: se-resize;
+padding: 5px;
+border-radius: 50%;
+} */
+
+
+.drag-icon img,
+.drag-icon-green img {
+    /* position: relative; */
+    border-radius: 50%;
+}
+
+.rotate-icon img {
+    position: relative;
+    /* left: 35px; */
+    bottom: 14px;
+}
+
+.edit-icon img {
+    position: relative;
+    /* bottom: 14px; */
+}
+
+.edit-icon .edit-handle {
+    margin-right: 2px;
+    bottom: -5px !important;
+}
+
+/* .circle-icon-block {
+    position: relative;
+} */
+
+.react-draggable {
+    max-width: 250px;
+}
+
+.circle-icon-block-inner {
+    /* display: flex; */
+    /* background: green; */
+    /* width: 200px;
+    height: 200px; */
+    /* position: relative; */
+}
+
+
+/* .react-draggable {
+    position: absolute !important;
+    top: 0;
+} */
+
+/* 
+
+.drag-icon {
+    background: rgb(42, 130, 232);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+} */
+.edit-icon img {
+    margin-top: 5px;
+    right: 0;
+}
+
+.drag-icon img {
+    margin-top: 0px;
+}
+
+.one-circle-container {
+    max-width: 125px;
+}
+
+.two-circle-container {
+    max-width: 125px;
+    position: absolute;
+}
+
+.two-circle-containe .resize-icon {
+    position: absolute;
+    right: 40px;
+    bottom: -4px;
+}
+
+.four-circle-container .resize-icon {
+    position: absolute;
+    right: 0px;
+    bottom: -4px;
+}
+
+.four-circle-container {
+    max-width: 175px;
+    position: absolute;
+}
+
+.four-circle-container .rotate-icon img {
+    position: absolute;
+    /* left: 35px; */
+    bottom: 20px;
+    right: 0;
+}
+
+.four-circle-container .edit-icon img {
+    position: absolute;
+    right: 0px;
+    /* bottom: 45px; */
+}
+
+.four-circle-container .drag-icon img {
+    position: absolute;
+    right: 0px;
+    bottom: -29px;
+}
+
+
+/* ==================== */
+
+.six-circle-container .resize-icon {
+    position: absolute;
+    right: 0px;
+    bottom: -4px;
+}
+
+.six-circle-container {
+    max-width: 175px;
+    position: absolute;
+}
+
+.six-circle-container .rotate-icon img {
+    position: absolute;
+    /* left: 35px; */
+    bottom: 20px;
+    right: 0;
+}
+
+.six-circle-container .edit-icon img {
+    position: absolute;
+    right: 0px;
+    bottom: 45px;
+}
+
+.six-circle-container .drag-icon img {
+    position: absolute;
+    right: 0px;
+    bottom: -17px;
+}
+
+/* ================== */
+
+.eight-circle-container .resize-icon {
+    position: absolute;
+    right: 0px;
+    bottom: -4px;
+}
+
+.eight-circle-container {
+    max-width: 150px;
+    position: absolute;
+}
+
+.eight-circle-container .rotate-icon img {
+    position: absolute;
+    /* left: 35px; */
+    bottom: 20px;
+    right: 0;
+}
+
+.eight-circle-container .edit-icon img {
+    position: absolute;
+    right: 0px;
+    bottom: 45px;
+}
+
+.eight-circle-container .drag-icon img {
+    position: absolute;
+    right: 0px;
+    bottom: -29px;
+}
+
+.select-collapse-button .btn.collapsed:active {
+    background-color: #eeeded;
+    position: relative;
+    z-index: 2 !important;
+}
+
+
+.one-circle-containers.react-draggable {
+    /* z-index: 999 !important; */
+    position: absolute;
+}
+
+/* .react-draggable {
+    z-index: 99999 !important;
+} */
+
+.circle-icon-block {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.new-circle-icon-block {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+/* .circle-dot-block-area {
+    width: 50%;
+} */
+
+.circle-dot-block {
+    margin-top: 0px !important;
+}
+
+/* .actions {
+    position: absolute;
+    right: -10px;
+    top: -10px;
+} */
+
+.popup-overlay.delete-popup-content-content-overlay {
+    z-index: 999999 !important;
+}
+
+
+/* Added css for Action icon */
+.edit-icon-green,
+.drag-icon-green,
+.delete-action-icon,
+.hide-actions-icon,
+.vertical-horizontal-resize,
+.vertical-resize-icon-green,
+.horizontal-resize-icon-green {
+    width: 22px;
+    height: 22px;
+    background: #5cb226;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    margin-top: 5px;
+    cursor: pointer;
+}
+
+.delete-action-icon svg,
+.hide-actions-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.edit-icon-green svg,
+.drag-icon-green svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+.vertical-resize-icon-green svg,
+.horizontal-resize-icon-green svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+
+.vertical-horizontal-resize svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+.circle-dot-block-area {
+    /* height: -webkit-fill-available; */
+}
+
+/* .circle-icon-block {
+    margin-bottom: 20px;
+} */
+
+.rotate-icon-green {
+    text-align: left;
+    pointer-events: auto;
+}
+
+.rotate-handle {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.actions {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transform: translate(5px, -5px);
+    z-index: 999999;
+    max-width: fit-content !important;
+    width: fit-content !important;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    transform-origin: center center;
+    pointer-events: auto;
+    margin: 0 !important;
+}
+
+/* Ensure actions stay near lights regardless of rotation - max 10px gap */
+.actions,
+.rotate-actions {
+    position: absolute !important;
+    right: 0px !important;
+    top: 0px !important;
+    transform: translate(5px, -5px) !important;
+    margin: 0 !important;
+}
+
+.vertical-horizontal-resize {
+    position: relative;
+    z-index: 9;
+}
+
+/* CSS for circle display as raw 25-06-2024 tuesday */
+.dot-flex-row {
+    justify-content: space-between;
+    height: 100% !important;
+    display: flex;
+    width: 100%;
+}
+
+.dot-flex-row-for-nth {
+    justify-content: space-between;
+    /* height: 100% !important; */
+    display: flex;
+    width: 100%;
+}
+
+.two-circle-container .dot-flex-row {
+    flex-direction: column;
+    width: max-content;
+}
+
+.two-circle-container .circle-icon-block {
+    width: max-content;
+}
+
+.two-circle-container.react-draggable.react-resizable .dot-flex-row .circle-dot-block-area:nth-child(2) {
+    justify-content: flex-end;
+    display: flex;
+    flex-direction: column;
+}
+
+.two-circle-container {
+    position: relative;
+}
+
+.two-circle-container.react-draggable.react-resizable .actions {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transform: translate(5px, -5px);
+    margin-top: 0;
+    z-index: 999999;
+}
+
+.eight-circle-container {
+    position: relative;
+}
+
+.eight-circle-container .actions {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transform: translate(5px, -5px);
+    margin-top: 0;
+    z-index: 999999;
+}
+
+.eight-circle-container .rotate-actions {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transform: translate(5px, -5px);
+    margin-top: 0 !important;
+    z-index: 999999;
+}
+
+.four-circle-container {
+    position: relative;
+}
+
+.four-circle-container .actions {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transform: translate(5px, -5px);
+    margin-top: 0 !important;
+    z-index: 999999;
+}
+
+.six-circle-container {
+    position: relative;
+}
+
+.six-circle-container .actions {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transform: translate(5px, -5px);
+    margin-top: 0 !important;
+    z-index: 999999;
+}
+
+.circle-block {
+    /* width: 20px;
+    height: 20px; */
+    /* background-color: red; */
+    display: block;
+    margin: 10px;
+    color: #fff;
+}
+
+.new-dot-row-block {
+    position: relative;
+    right: 170px;
+    display: flex;
+}
+
+.new-dot-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 33%;
+}
+
+.new-dot-block-nth {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 1%;
+    /* width: 33%; */
+}
+
+.new-dot-block.flex-hr {
+    flex-direction: row;
+}
+
