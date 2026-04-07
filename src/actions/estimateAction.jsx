@@ -1,5 +1,5 @@
 import { authApi } from "../utilities/helpers/ApiHelper";
-import { greenhseBaseUrl } from "../components/config/config.js";
+import { greenhseBaseUrl } from "../components/config/config.jsx";
 
 
 const SmtpEmailApi = async (emailParams) => {

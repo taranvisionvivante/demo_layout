@@ -5,14 +5,14 @@ import {
   GetProductApi,
   GetAllProductApi,
 } from "../../actions/lightPlacementActions.jsx";
-import { DataLoading, OldSpinnerLoader } from "../../loader/Index.js";
+import { DataLoading, OldSpinnerLoader } from "../../loader/Index.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
-import Header from "../header/Index.js";
+import Header from "../header/Index.jsx";
 import backArraow from "../../assets/img/back_arrow.svg";
 import LightbulbIcon from "@mui/icons-material/Lightbulb";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import { GetAllLightPlacement } from "../../IndexedDB.js";
+import { GetAllLightPlacement } from "../../IndexedDB.jsx";
 import DefaultImg from "../../assets/img/defaultImg.png";
 // import EditView from "../editView/Index.js";
 import Joyride, {

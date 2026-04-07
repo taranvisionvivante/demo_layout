@@ -14,9 +14,12 @@ import {
   deleteMainFile,
   GetScreenShot,
   getPDFFile,
-} from "../../IndexedDB.js";
+} from "../../IndexedDB.jsx";
 import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+// import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
 import "./Index.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import editIcon from "../../assets/img/edit.svg";
@@ -36,7 +39,7 @@ import {
   loadLogo,
   convertSVGToPNG,
 } from "../../utilities/helpers/commonHelper.js";
-import { emailAndAddress } from "../config/config.js";
+import { emailAndAddress } from "../config/config.jsx";
 import * as pdfjsLib from "pdfjs-dist";
 import { useSelector } from "react-redux";
 

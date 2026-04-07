@@ -1,5 +1,5 @@
 import { authApi } from "../utilities/helpers/ApiHelper";
-import { greenhseBaseUrl } from "../components/config/config.js";
+import { greenhseBaseUrl } from "../components/config/config.jsx";
 
 const GetAllCategoriesApi = async (id) => {
   const url = `https://www.getestimate.greenhse.com/api/categories.php?id=${id}`;

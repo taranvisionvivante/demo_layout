@@ -2,13 +2,13 @@ import React from 'react';
 import { Routes, Route, useRoutes, Navigate } from "react-router-dom";
 import Homepage from "../components/homepage/Index.jsx"
 import ScanerView from '../components/scanerView/Index.jsx';
-import EditView from '../components/editView/Index.js'
+import EditView from '../components/editView/Index.jsx'
 import LightPlacement from '../components/lightPlacementView/Index.jsx';
-import EstimateView from '../components/estimate/Index.js';
-import Login from '../components/auth/Index.js';
+import EstimateView from '../components/estimate/Index.jsx';
+import Login from '../components/auth/Index.jsx';
 import { useSelector } from 'react-redux';
-import AdminLayout from '../components/admin/layout/Index.js';
-import SaveData from '../components/admin/savedData/Index.js';
+import AdminLayout from '../components/admin/layout/Index.jsx';
+import SaveData from '../components/admin/savedData/Index.jsx';
 
 const Routing = () => {
   const { user } = useSelector((state) => state.auth);

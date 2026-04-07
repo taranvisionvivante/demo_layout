@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import "./Index.css";
 
-import Header from "../header/Index.js";
+import Header from "../header/Index.jsx";
 import hamburger from "../../assets/img/hamburgergroup.svg";
 import backArraow from "../../assets/img/back_arrow.svg";
 import alertIcon from "../../assets/img/alert_icon.svg";
@@ -40,7 +40,7 @@ import {
 } from "../../utilities/helpers/commonHelper.js";
 import { emailAndAddress } from "../config/config.js";
 import greenhscLogo from "../../assets/img/greenhse-logo.png";
-import { getFile, getFileByName, updateEstimateName } from "../../IndexedDB.js";
+import { getFile, getFileByName, updateEstimateName } from "../../IndexedDB.jsx";
 import * as pdfjsLib from "pdfjs-dist";
 import toast, { Toaster } from "react-hot-toast";
 
