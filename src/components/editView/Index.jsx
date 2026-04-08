@@ -38,7 +38,7 @@ import {
   loadLogo,
   convertSVGToPNG,
 } from "../../utilities/helpers/commonHelper.js";
-import { emailAndAddress } from "../config/config.jsx";
+import { emailAndAddress, greenhseBaseUrl } from "../config/config.jsx";
 import greenhscLogo from "../../assets/img/greenhse-logo.png";
 import { getFile, getFileByName, updateEstimateName } from "../../IndexedDB.jsx";
 import * as pdfjsLib from "pdfjs-dist";
@@ -148,7 +148,7 @@ const predefinedCombos = {
   ],
 };
 
-const CLAUDE_API_KEY = import.meta.env.VITE_REACT_APP_CLAUDE_API_KEY;
+// const CLAUDE_API_KEY = import.meta.env.VITE_REACT_APP_CLAUDE_API_KEY;
 
 // Function to get dot size based on product mm size
 const getDotSize = (productData) => {
@@ -550,6 +550,7 @@ export default function App() {
     setShowPointsPopup(false);
     setCmInput("");
     setAiError(null);
+    setResult(null);
     const canvas = canvasRef.current;
     if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
   };
@@ -652,64 +653,140 @@ export default function App() {
       const imgWidth = imageRef.current.offsetWidth;
       const imgHeight = imageRef.current.offsetHeight;
 
-      const prompt =
-        `This is a floor plan image. I have marked two points (labeled 1 and 2) connected by a blue dashed line.
-                The real-world distance between point 1 and point 2 is ${cm} cm.
-                The pixel distance is ${pixelDist.toFixed(2)} pixels.
-                The displayed image size is ${imgWidth}px wide and ${imgHeight}px tall.
-                IMPORTANT SCALE RULE: 1 grid box = 10px (fixed).
-                Using that rule:
-                1. Count how many grid squares span between point 1 and point 2.
-                2. Compute cm_per_grid = ${cm} / grids_between_points
-                3. pixels_per_cm = 10 / cm_per_grid   (since 1 grid = 10px)
-                4. floor_plan_width_cm  = ${imgWidth}  / pixels_per_cm
-                5. floor_plan_height_cm = ${imgHeight} / pixels_per_cm
-                6. floor_plan_area_cm2  = floor_plan_width_cm * floor_plan_height_cm
-                7. floor_plan_area_m2   = floor_plan_area_cm2 / 10000
-                8. A standard light fixture covers roughly a circular area of radius 200cm (r=200cm).
-                   light_coverage_area_cm2 = Math.PI * 200 * 200
-                   light_coverage_area_m2  = light_coverage_area_cm2 / 10000
-                9. coverage_percent = (light_coverage_area_cm2 / floor_plan_area_cm2) * 100
-                Use THIS computed pixels_per_cm for all further calculations, NOT the raw pixel/cm ratio.
-                Respond ONLY as JSON, no markdown:
-                {
-                  "grids_between_points":<number|null>,
-                  "cm_per_grid":<number|null>,
-                  "pixels_per_grid":10,
-                  "pixels_per_cm":<computed from 10px/grid rule>,
-                  "light_fixture_size_px":<pixels_per_cm * 30>,
-                  "floor_plan_width_cm":<number>,
-                  "floor_plan_height_cm":<number>,
-                  "floor_plan_area_cm2":<number>,
-                  "floor_plan_area_m2":<number>,
-                  "light_coverage_area_cm2":<number>,
-                  "light_coverage_area_m2":<number>,
-                  "coverage_percent":<number>,
-                  "explanation":"<brief>"
-                }`;
+      // const prompt =
+      //   `This is a floor plan image. I have marked two points (labeled 1 and 2) connected by a blue dashed line.
+      //           The real-world distance between point 1 and point 2 is ${cm} cm.
+      //           The pixel distance is ${pixelDist.toFixed(2)} pixels.
+      //           The displayed image size is ${imgWidth}px wide and ${imgHeight}px tall.
+      //           IMPORTANT SCALE RULE: 1 grid box = 10px (fixed).
+      //           Using that rule:
+      //           1. Count how many grid squares span between point 1 and point 2.
+      //           2. Compute cm_per_grid = ${cm} / grids_between_points
+      //           3. pixels_per_cm = 10 / cm_per_grid   (since 1 grid = 10px)
+      //           4. floor_plan_width_cm  = ${imgWidth}  / pixels_per_cm
+      //           5. floor_plan_height_cm = ${imgHeight} / pixels_per_cm
+      //           6. floor_plan_area_cm2  = floor_plan_width_cm * floor_plan_height_cm
+      //           7. floor_plan_area_m2   = floor_plan_area_cm2 / 10000
+      //           8. A standard light fixture covers roughly a circular area of radius 200cm (r=200cm).
+      //              light_coverage_area_cm2 = Math.PI * 200 * 200
+      //              light_coverage_area_m2  = light_coverage_area_cm2 / 10000
+      //           9. coverage_percent = (light_coverage_area_cm2 / floor_plan_area_cm2) * 100
+      //           Use THIS computed pixels_per_cm for all further calculations, NOT the raw pixel/cm ratio.
+      //           Respond ONLY as JSON, no markdown:
+      //           {
+      //             "grids_between_points":<number|null>,
+      //             "cm_per_grid":<number|null>,
+      //             "pixels_per_grid":10,
+      //             "pixels_per_cm":<computed from 10px/grid rule>,
+      //             "light_fixture_size_px":<pixels_per_cm * 30>,
+      //             "floor_plan_width_cm":<number>,
+      //             "floor_plan_height_cm":<number>,
+      //             "floor_plan_area_cm2":<number>,
+      //             "floor_plan_area_m2":<number>,
+      //             "light_coverage_area_cm2":<number>,
+      //             "light_coverage_area_m2":<number>,
+      //             "coverage_percent":<number>,
+      //             "explanation":"<brief>"
+      //           }`;
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": CLAUDE_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-5",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: "image/png", data: annotatedBase64 } },
-              { type: "text", text: prompt },
-            ],
-          }],
-        }),
+      const prompt = `
+       You are an architectural measurement engine. You do NOT estimate. You COUNT grid squares visually.
+
+       INPUT FACTS (ground truth):
+       - Real distance between point 1 and 2 = ${cm} cm
+       - Pixel distance between point 1 and 2 = ${pixelDist.toFixed(2)} px
+       - Image size = ${imgWidth}px width, ${imgHeight}px height
+       - FIXED RULE: 1 grid square = 10 pixels EXACTLY
+
+       MANDATORY VISION TASKS (must be done from the image):
+
+       STEP 1 — Visually count how many grid squares lie between point 1 and 2.
+       Call this: grids_between_points
+
+       STEP 2 — Compute scale from grid rule (NOT from pixelDist):
+       cm_per_grid = ${cm} / grids_between_points
+       pixels_per_cm_from_grid = 10 / cm_per_grid
+
+       STEP 3 — Compute scale from raw pixel distance (for validation):
+       pixels_per_cm_from_pixels = ${pixelDist.toFixed(2)} / ${cm}
+
+       STEP 4 — These two values MUST be close. If not, re-count grids.
+
+       STEP 5 — Using pixels_per_cm_from_grid, compute full floor dimensions:
+       floor_width_cm  = ${imgWidth}  / pixels_per_cm_from_grid
+       floor_height_cm = ${imgHeight} / pixels_per_cm_from_grid
+       floor_area_cm2  = floor_width_cm * floor_height_cm
+       floor_area_m2   = floor_area_cm2 / 10000
+
+       STEP 6 — Light coverage calculation:
+       Light radius = 200 cm
+       light_area_cm2 = π * 200 * 200
+       light_area_m2  = light_area_cm2 / 10000
+       coverage_percent = (light_area_cm2 / floor_area_cm2) * 100
+
+       STEP 7 — Also return cm_per_pixel for:
+       A) selected segment (points 1–2)
+       B) entire floor width
+
+       IMPORTANT RULES:
+       - You MUST visually count grid squares from the image.
+       - Do NOT guess.
+       - Do NOT skip steps.
+       - Output ONLY valid JSON. No markdown.
+
+       OUTPUT FORMAT:
+       {
+         "grids_between_points": number,
+         "cm_per_grid": number,
+         "pixels_per_grid": 10,
+         "pixels_per_cm_from_grid": number,
+         "pixels_per_cm_from_pixels": number,
+         "cm_per_pixel_selected_segment": number,
+         "cm_per_pixel_floor_width": number,
+         "floor_width_cm": number,
+         "floor_height_cm": number,
+         "floor_area_cm2": number,
+         "floor_area_m2": number,
+         "light_area_cm2": number,
+         "light_area_m2": number,
+         "coverage_percent": number,
+         "light_fixture_size_px": number,
+         "explanation": "brief reasoning of grid counting"
+       }
+    `;
+
+      // const res = await fetch("https://api.anthropic.com/v1/messages", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     "x-api-key": CLAUDE_API_KEY,
+      //     "anthropic-version": "2023-06-01",
+      //     "anthropic-dangerous-direct-browser-access": "true",
+      //   },
+      //   body: JSON.stringify({
+      //     model: "claude-sonnet-4-5",
+      //     max_tokens: 1000,
+      //     messages: [{
+      //       role: "user",
+      //       content: [
+      //         { type: "image", source: { type: "base64", media_type: "image/png", data: annotatedBase64 } },
+      //         { type: "text", text: prompt },
+      //       ],
+      //     }],
+      //   }),
+      // });
+      // const data = await res.json();
+
+      const imagedata = { image: annotatedBase64, prompt };
+      const apiUrl = greenhseBaseUrl + `index.php?type=getAIRequest`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify(imagedata)
       });
+      const apidata = await response.text();
+      const data = JSON.parse(apidata);
 
-      const data = await res.json();
       const raw = data?.content?.[0]?.text || "";
       const clean = raw.replace(/```json|```/g, "").trim();
 
@@ -726,6 +803,7 @@ export default function App() {
       }
 
       setResult({ pixelDist: pixelDist.toFixed(1), cm, pixelsPerCm: pixelsPerCm.toFixed(2), ...parsed });
+      completeAI({ pixelDist: pixelDist.toFixed(1), cm, pixelsPerCm: pixelsPerCm.toFixed(2), ...parsed });
       // setShowLightPicker(true);
 
     } catch (err) {
@@ -735,20 +813,20 @@ export default function App() {
     }
   };
 
-  const completeAI = () => {
+  const completeAI = (data) => {
     const layouts = JSON.parse(localStorage.getItem("layouts") || "{}");
 
     const layoutFile = layouts[fileName];
 
     layoutFile.ai_analyse = true;
-    layoutFile.ai_analyse_result = result;
+    layoutFile.ai_analyse_result = data;
 
     layouts[fileName] = layoutFile;
     localStorage.setItem("layouts", JSON.stringify(layouts));
     resetPoints();
     setAnalyzedCriteria({
       isAnalyzed: true,
-      analyzedData: result,
+      analyzedData: data,
     });
   };
 
@@ -778,24 +856,25 @@ export default function App() {
 
   //Get Current Light Key
   // console.log("current key", currentKey);
-  useEffect(() => {
-    if (Array.isArray(savedCombos) && savedCombos?.length > 0) {
-      const allProducts = savedCombos || [];
-      if (!Array.isArray(allProducts) || allProducts.length === 0) return;
-      const latestProduct = allProducts?.reduce((latest, item) =>
-        item?.productData?.createdAt > latest?.productData?.createdAt ? item : latest
-      );
+  //previous
+  // useEffect(() => {
+  //   if (Array.isArray(savedCombos) && savedCombos?.length > 0) {
+  //     const allProducts = savedCombos || [];
+  //     if (!Array.isArray(allProducts) || allProducts.length === 0) return;
+  //     const latestProduct = allProducts?.reduce((latest, item) =>
+  //       item?.productData?.createdAt > latest?.productData?.createdAt ? item : latest
+  //     );
 
-      // console.log("LATEST", latestProduct, latestProduct?.productData?.isApplied === false);
+  //     // console.log("LATEST", latestProduct, latestProduct?.productData?.isApplied === false);
 
-      if (latestProduct && latestProduct?.productData?.isApplied === false) {
-        setCurrentKey(latestProduct?.comboKey);
-      } else {
-        setCurrentKey(null);
-      }
+  //     if (latestProduct && latestProduct?.productData?.isApplied === false) {
+  //       setCurrentKey(latestProduct?.comboKey);
+  //     } else {
+  //       setCurrentKey(null);
+  //     }
 
-    }
-  }, [savedCombos]);
+  //   }
+  // }, [savedCombos]);
 
   //States used for zoom
   const [zoomCount, setZoomCount] = useState(0);
@@ -947,19 +1026,20 @@ export default function App() {
 
     processProductSelection(data, comboBaseKey);
     // console.log("&&&&&&&&&&&&&&&&&&&&&&****************",data);
-    setIsShown(false);
+    // setIsShown(false);
 
     setIsPanningEnabled(false);
+    //previous
     // if (data?.isApplied === false) {
-    toast("Select the Area where you want to upload the light!", {
-      id: "select-area-warning-1",
-      icon: "⚠️",
-      duration: 3000,
-      style: {
-        background: "#fff3cd",
-        color: "#856404",
-      },
-    });
+    // toast("Select the Area where you want to upload the light!", {
+    //   id: "select-area-warning-1",
+    //   icon: "⚠️",
+    //   duration: 3000,
+    //   style: {
+    //     background: "#fff3cd",
+    //     color: "#856404",
+    //   },
+    // });
     // }
   };
 
@@ -1002,19 +1082,20 @@ export default function App() {
 
     // Clear pending product
     setPendingProductData(null);
-    setIsShown(false);
+    // setIsShown(false);
     setIsPanningEnabled(false);
 
+    // previous
     // if (updatedProduct?.isApplied === false) {
-    toast("Select the Area where you want to upload the light!", {
-      id: "select-area-warning-2",
-      icon: "⚠️",
-      duration: 3000,
-      style: {
-        background: "#fff3cd",
-        color: "#856404",
-      },
-    });
+    // toast("Select the Area where you want to upload the light!", {
+    //   id: "select-area-warning-2",
+    //   icon: "⚠️",
+    //   duration: 3000,
+    //   style: {
+    //     background: "#fff3cd",
+    //     color: "#856404",
+    //   },
+    // });
     // }
   };
 
@@ -1815,83 +1896,89 @@ export default function App() {
   };
 
   const placeLightsInSelection = () => {
-    //console.log(currentKey);
-    if (!currentKey) {
-      toast.error("Please Select the Lighting First!");
-      setShowPopup(false);
-      return;
-    }
+    //previous
+    // if (!currentKey) {
+    //   toast.error("Please Select the Lighting First!");
+    //   setShowPopup(false);
+    //   return;
+    // }
 
-    if (!actualBox) return;
+    //previous
+    // if (!actualBox) return;
 
-    const { x, y, width, height } = actualBox;
+    // const { x, y, width, height } = actualBox;
 
-    const finalBox = {
-      x: Math.min(x, x + width),
-      y: Math.min(y, y + height),
-      width: Math.abs(width),
-      height: Math.abs(height),
-    };
-    const data = calculateLights(finalBox);
+    // const finalBox = {
+    //   x: Math.min(x, x + width),
+    //   y: Math.min(y, y + height),
+    //   width: Math.abs(width),
+    //   height: Math.abs(height),
+    // };
+    // const data = calculateLights(finalBox);
 
     // console.log("**********", x, y, width, height, data);
 
     const products = JSON.parse(localStorage.getItem("savedCombos")) || [];
 
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
+    //previous
+    // const centerX = x + width / 2;
+    // const centerY = y + height / 2;
 
-    const updatedProducts = products.map((item) => {
-      if (item?.comboKey === currentKey) {
-        console.log("particualr ****", item);
-        return {
-          ...item,
+    // const updatedProducts = products.map((item) => {
+    //   if (item?.comboKey === currentKey) {
+    //     console.log("particualr ****", item);
+    //     return {
+    //       ...item,
 
-          center: { x: centerX, y: centerY, },
+    //       center: { x: centerX, y: centerY, },
 
-          absoluteLastDot: { x: centerX, y: centerY, },
+    //       absoluteLastDot: { x: centerX, y: centerY, },
 
-          anchor: { x: 0.5, y: 0.5, },
+    //       anchor: { x: 0.5, y: 0.5, },
 
-          stretch: { x: width, y: height, },
+    //       stretch: { x: width, y: height, },
 
-          productData: {
-            ...item.productData,
-            width: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightWidth) / 2) : data?.lightWidth,
-            height: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightHeight) / 2) : data?.lightHeight,
-            isApplied: true,
-          },
-        };
-      }
-      return item;
-    });
+    //       productData: {
+    //         ...item.productData,
+    //         width: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightWidth) / 2) : data?.lightWidth,
+    //         height: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightHeight) / 2) : data?.lightHeight,
+    //         isApplied: true,
+    //       },
+    //     };
+    //   }
+    //   return item;
+    // });
 
     // console.log("^^^^^^^ -------", updatedProducts, currentKey);
 
-    localStorage.setItem("savedCombos", JSON.stringify(updatedProducts));
-    setSavedCombos(updatedProducts);
-    setShowPopup(false);
-    setFinalSelection(null);
-    setSelectionBox(null);
+    localStorage.setItem("savedCombos", JSON.stringify(products));
+
+    setSavedCombos(products);
+
+    // previous
+    // setShowPopup(false);
+    // setFinalSelection(null);
+    // setSelectionBox(null);
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // ✅ Also ignore clicks inside the selection popup
-      const isInsideActionContainer = event.target.closest(".action-container");
-      const isInsidePopup = event.target.closest(".selection-popup");
+  //previous
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     // ✅ Also ignore clicks inside the selection popup
+  //     const isInsideActionContainer = event.target.closest(".action-container");
+  //     const isInsidePopup = event.target.closest(".selection-popup");
 
-      if (isInsideActionContainer) {
-        setIsShown(false);
-      } else if (!isInsidePopup) {
-        setIsShown(true);
-      }
-      // If inside popup, do nothing — don't touch isShown
-    };
+  //     if (isInsideActionContainer) {
+  //       setIsShown(false);
+  //     } else if (!isInsidePopup) {
+  //       setIsShown(true);
+  //     }
+  //     // If inside popup, do nothing — don't touch isShown
+  //   };
 
-    window.addEventListener("pointerdown", handleClickOutside);
-    return () => window.removeEventListener("pointerdown", handleClickOutside);
-  }, []);
+  //   window.addEventListener("pointerdown", handleClickOutside);
+  //   return () => window.removeEventListener("pointerdown", handleClickOutside);
+  // }, []);
 
   // console.log("________________", isShown);
 
@@ -2096,21 +2183,23 @@ export default function App() {
                         }
                         startPan(e.clientX, e.clientY);
                       }
-                      else {
-                        if (isSelecting) return;
 
-                        const rect = imageRef.current.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const y = e.clientY - rect.top;
+                      // previous
+                      // else {
+                      //   if (isSelecting) return;
 
-                        // setFinalSelection(null);
-                        // setSelectionBox(null);
-                        // setShowPopup(false);
+                      //   const rect = imageRef.current.getBoundingClientRect();
+                      //   const x = e.clientX - rect.left;
+                      //   const y = e.clientY - rect.top;
 
-                        setSelectionStart({ x, y });
-                        setSelectionBox({ x, y, width: 0, height: 0 });
-                        setIsSelecting(true);
-                      }
+                      //   // setFinalSelection(null);
+                      //   // setSelectionBox(null);
+                      //   // setShowPopup(false);
+
+                      //   setSelectionStart({ x, y });
+                      //   setSelectionBox({ x, y, width: 0, height: 0 });
+                      //   setIsSelecting(true);
+                      // }
                     }}
 
                     // onMouseDown={
@@ -2128,24 +2217,30 @@ export default function App() {
                     onMouseMove={(e) => {
                       if (isPanningEnabled) {
                         movePan(e.clientX, e.clientY);
-                      } else if (isSelecting) {
-                        const rect = imageRef.current.getBoundingClientRect();
-                        const currentX = e.clientX - rect.left;
-                        const currentY = e.clientY - rect.top;
-
-                        setSelectionBox({
-                          x: selectionStart.x,
-                          y: selectionStart.y,
-                          width: currentX - selectionStart.x,
-                          height: currentY - selectionStart.y,
-                        });
-                        setActualBox({
-                          x: selectionStart.x,
-                          y: selectionStart.y,
-                          width: currentX - selectionStart.x,
-                          height: currentY - selectionStart.y,
-                        });
                       }
+
+                      //previous
+                      // else if (isSelecting) {
+                      //   const rect = imageRef.current.getBoundingClientRect();
+                      //   const currentX = e.clientX - rect.left;
+                      //   const currentY = e.clientY - rect.top;
+
+                      //   setSelectionBox({
+                      //     x: selectionStart.x,
+                      //     y: selectionStart.y,
+                      //     width: currentX - selectionStart.x,
+                      //     height: currentY - selectionStart.y,
+                      //   });
+
+                      //   // previous
+                      //   // setActualBox({
+                      //   //   x: selectionStart.x,
+                      //   //   y: selectionStart.y,
+                      //   //   width: currentX - selectionStart.x,
+                      //   //   height: currentY - selectionStart.y,
+                      //   // });
+                      // }
+
                     }}
 
                     // onMouseMove={
@@ -2157,25 +2252,29 @@ export default function App() {
                     onMouseUp={() => {
                       if (isPanningEnabled) {
                         endPan();
-                      } else {
-                        setIsSelecting(false);
-
-                        if (selectionBox) {
-                          const finalBox = {
-                            x: Math.min(selectionBox.x, selectionBox.x + selectionBox.width),
-                            y: Math.min(selectionBox.y, selectionBox.y + selectionBox.height),
-                            width: Math.abs(selectionBox.width),
-                            height: Math.abs(selectionBox.height),
-                          };
-
-                          const MIN_SIZE = 10;
-                          if (finalBox.width > MIN_SIZE && finalBox.height > MIN_SIZE) {
-                            setFinalSelection(finalBox);
-                            setShowPopup(true);
-                          }
-
-                        }
                       }
+
+                      // previous
+                      // else {
+                      //   setIsSelecting(false);
+
+                      //   if (selectionBox) {
+                      //     const finalBox = {
+                      //       x: Math.min(selectionBox.x, selectionBox.x + selectionBox.width),
+                      //       y: Math.min(selectionBox.y, selectionBox.y + selectionBox.height),
+                      //       width: Math.abs(selectionBox.width),
+                      //       height: Math.abs(selectionBox.height),
+                      //     };
+
+                      //     const MIN_SIZE = 10;
+                      //     if (finalBox.width > MIN_SIZE && finalBox.height > MIN_SIZE) {
+                      //       setFinalSelection(finalBox);
+                      //       setShowPopup(true);
+                      //     }
+
+                      //   }
+                      // }
+
                     }}
 
                     // onMouseUp={!isPanningEnabled ? undefined : endPan}
@@ -2183,10 +2282,13 @@ export default function App() {
                     onMouseLeave={() => {
                       if (isPanningEnabled) {
                         endPan();
-                      } else {
-                        setIsSelecting(false);
-                        setSelectionBox(null);
                       }
+
+                      // previous
+                      // else {
+                      //   setIsSelecting(false);
+                      //   setSelectionBox(null);
+                      // }
                     }}
 
                     // onMouseLeave={!isPanningEnabled ? undefined : endPan}
@@ -2241,7 +2343,7 @@ export default function App() {
                         setError("Failed to load image. Please check the console for details.");
                       }}
                       onClick={(e) => {
-                        if (isPanningEnabled) return
+                        if (isPanningEnabled || analyzedCriteria?.isAnalyzed) return
                         handleImgClick(e);
                       }}
                     />
@@ -2250,7 +2352,8 @@ export default function App() {
 
                     {/* {console.log("^^^^^%%%", finalSelection, selectionBox, finalSelection)} */}
 
-                    {(selectionBox || finalSelection) && !isPanningEnabled && isShown && currentKey !== null && (actualBox !== null && actualBox?.height > 0 && actualBox?.width > 0) && (
+                    {/* previous */}
+                    {/* {(selectionBox || finalSelection) && !isPanningEnabled && isShown && currentKey !== null && (actualBox !== null && actualBox?.height > 0 && actualBox?.width > 0) && (
                       <div
                         style={{
                           position: "absolute",
@@ -2264,7 +2367,7 @@ export default function App() {
                           pointerEvents: "none",
                         }}
                       />
-                    )}
+                    )} */}
 
                     {/* Render lights only if positions exist */}
                     {lightPlacementPositions.map((light, index) => (
@@ -2290,9 +2393,9 @@ export default function App() {
 
                     {Array.isArray(savedCombos) &&
                       savedCombos
-                        .filter(
-                          (c) => c && c.center && typeof c.center.x === "number" && c.productData.isApplied === true
-                        )
+                        // .filter(
+                        //   (c) => c && c.center && typeof c.center.x === "number" && c.productData.isApplied === true
+                        // )
                         .map((combo, i) => {
                           const offsets = predefinedCombos[combo.baseKey] || [];
 
@@ -2930,7 +3033,8 @@ export default function App() {
             </div>
           </div>
 
-          {showPopup && finalSelection && isShown && currentKey !== null && (actualBox !== null && actualBox?.height > 0 && actualBox?.width > 0) && (
+          {/* previous */}
+          {/* {showPopup && finalSelection && isShown && currentKey !== null && (actualBox !== null && actualBox?.height > 0 && actualBox?.width > 0) && (
             <div
               style={{
                 position: "fixed",
@@ -2967,7 +3071,6 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Data Cards */}
                 {(() => {
                   const data = calculateLights(finalSelection);
 
@@ -2998,7 +3101,6 @@ export default function App() {
                   );
                 })()}
 
-                {/* Divider */}
                 <div
                   style={{
                     height: "1px",
@@ -3007,12 +3109,10 @@ export default function App() {
                   }}
                 />
 
-                {/* Actions */}
                 <div style={{ display: "flex", gap: "10px" }}>
                   <button
                     onClick={() => {
                       placeLightsInSelection();
-                      // setShowPopup(false);
                     }}
                     style={{
                       flex: 1,
@@ -3048,7 +3148,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
         </div>
         <>
           <div style={{ display: !analyzedCriteria?.isAnalyzed ? "none" : "" }} className="col-md-4 sidebar-open sidebar-block-area">
@@ -3091,6 +3191,7 @@ export default function App() {
                     setShowLightPlacementComp={setShowLightPlacementComp}
                     setIsSelect={setIsSelect}
                     isReduce={false}
+                    aiData={analyzedCriteria?.analyzedData}
                   />
                 </div>
               }
@@ -3176,15 +3277,15 @@ export default function App() {
                     ))}
                   </div>
 
-                  {result.floor_plan_area_m2 != null && (
+                  {result.floor_area_m2 != null && (
                     <>
                       <div style={s.sectionLabel}>Floor plan area & light coverage</div>
 
                       <div style={s.metricGrid}>
                         {[
-                          ["Floor width", `${(result.floor_plan_width_cm / 100).toFixed(2)} m`],
-                          ["Floor height", `${(result.floor_plan_height_cm / 100).toFixed(2)} m`],
-                          ["Total floor area", `${result.floor_plan_area_m2.toFixed(2)} m²`],
+                          ["Floor width", `${(result.floor_width_cm / 100).toFixed(2)} m`],
+                          ["Floor height", `${(result.floor_height_cm / 100).toFixed(2)} m`],
+                          ["Total floor area", `${result.floor_area_m2.toFixed(2)} m²`],
                         ].map(([label, val]) => (
                           <div key={label} style={s.metricCard}>
                             <div style={s.metricLabel}>{label}</div>
@@ -3208,7 +3309,19 @@ export default function App() {
 
             {/* FOOTER (fixed) */}
             <div style={s.popupFooter}>
-              {result ?
+
+              {!result && (
+                <div style={s.btnRow}>
+                  <button style={s.btnSecondary} onClick={() => { resetPoints(); setShowPointsPopup(false); }}>
+                    Cancel
+                  </button>
+                  <button style={s.btnPrimary} onClick={analyzeWithClaude}>
+                    {aiLoader ? "Analyzing..." : "Analyze"}
+                  </button>
+                </div>
+              )}
+
+              {/* {result ?
                 <div style={s.btnRow}>
                   <button style={s.btnPrimary} onClick={completeAI}>
                     Move to Light Placements
@@ -3223,7 +3336,8 @@ export default function App() {
                     {aiLoader ? "Analyzing..." : "Analyze"}
                   </button>
                 </div>
-              }
+              } */}
+
             </div>
 
           </div>
@@ -3313,6 +3427,7 @@ export default function App() {
                 isEditMode={true}
                 setIsSelect={setIsSelect}
                 isReduce={false}
+                aiData={analyzedCriteria?.analyzedData}
               />
             </div>
           </div>

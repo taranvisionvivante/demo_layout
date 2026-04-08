@@ -325,7 +325,7 @@ const LightPlacement = (props) => {
 
 
   const handleProductClick = (product, productColor, categoryData, isExtend, flagType, isSingle) => {
-    console.log("PRODUCT ====>", product, productColor, categoryData, selectedCategory);
+    // console.log("PRODUCT ====>", product, productColor, categoryData, selectedCategory);
     let productSku = product.sku;
     // if product color is undefined
     productColor = productColor || "#212529";
@@ -361,10 +361,19 @@ const LightPlacement = (props) => {
     const lightPixels = product?.custom_attributes?.find(item => item.attribute_code === "set_of_lights")?.value || null;
     // console.log("product url ====>", lightPixels?.split("*").map(Number), productUrl);
 
+    console.log("***************", props.aiData, lightPixels);
+
     if (lightPixels !== null && lightPixels !== undefined) {
       let [w, h] = lightPixels?.split("*").map(Number);
-      height = h;
-      width = w;
+      // height = h;
+      // width = w;
+
+      const widthPx = Math.ceil(w * props.aiData.pixels_per_cm_from_grid);
+      const heightPx = Math.ceil(h * props.aiData.pixels_per_cm_from_grid);
+
+      width = widthPx;
+      height = heightPx;
+
     }
 
     switch (productCategory.name) {
@@ -493,7 +502,7 @@ const LightPlacement = (props) => {
       imageUrl: productUrl,
       height: height,
       width: width,
-      isApplied: false,
+      // isApplied: false,
       // isApplied: isSingle ? false : true,
       createdAt: Date.now()
     };
@@ -650,7 +659,7 @@ const LightPlacement = (props) => {
       />
       <div className="row">
         <div className="col-md-12 select-lighting-block-area">
-          <div className={props?.isReduce === true ? '' : 'select-lighting-block'}>
+          <div className={'select-lighting-block'}>
             <div className="lightheader select-light-header">
               {/* <div className="custom-back-btn-align header-inner-text">
                 <button onClick={handleBackButtonClick}><ChevronLeftIcon />Back</button>
