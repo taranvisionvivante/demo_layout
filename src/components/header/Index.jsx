@@ -14,7 +14,7 @@ import greeHseLogo from "../../assets/img/greenhse-logo.png";
 import jsPDF from "jspdf";
 import printJS from "print-js";
 import backArraow from "../../assets/img/back_arrow.svg";
-import { OldSpinnerLoader } from "../../loader/Index";
+import { OldSpinnerLoader } from "../../loader/Index.jsx";
 import greenhscLogo from "../../assets/img/greenhse-logo.png";
 import { useSelector } from "react-redux";
 import homeLogo from "../../assets/img/homelogo.png"

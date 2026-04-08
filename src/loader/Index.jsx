@@ -1,5 +1,7 @@
-import ReactLoading from 'react-loading';
+import ReactLoadingLib from 'react-loading';
 import { ThreeDots } from 'react-loader-spinner';
+
+const ReactLoading = ReactLoadingLib.default || ReactLoadingLib;
 
 export const OldSpinnerLoader = () => {
     return (

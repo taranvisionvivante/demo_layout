@@ -20,7 +20,7 @@ import Joyride, {
   EVENTS,
   ORIGIN,
   STATUS,
-  CallBackProps,
+  // CallBackProps,
 } from "react-joyride";
 import toast from "react-hot-toast";
 

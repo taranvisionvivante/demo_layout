@@ -38,11 +38,14 @@ import {
   loadLogo,
   convertSVGToPNG,
 } from "../../utilities/helpers/commonHelper.js";
-import { emailAndAddress } from "../config/config.js";
+import { emailAndAddress } from "../config/config.jsx";
 import greenhscLogo from "../../assets/img/greenhse-logo.png";
 import { getFile, getFileByName, updateEstimateName } from "../../IndexedDB.jsx";
 import * as pdfjsLib from "pdfjs-dist";
 import toast, { Toaster } from "react-hot-toast";
+
+import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 // Configure PDF.js worker - use local worker file
 // if (typeof window !== 'undefined') {
@@ -144,6 +147,8 @@ const predefinedCombos = {
     { id: "I", fixed: false, fixedX: false, fixedY: false, row: 2, col: 2 },
   ],
 };
+
+const CLAUDE_API_KEY = import.meta.env.VITE_REACT_APP_CLAUDE_API_KEY;
 
 // Function to get dot size based on product mm size
 const getDotSize = (productData) => {
@@ -277,7 +282,7 @@ export default function App() {
   const containerRef = useRef(null);
   const prevImageUrlRef = useRef(null);
   const [isPanning, setIsPanning] = useState(false);
-  const [isPanningEnabled, setIsPanningEnabled] = useState(true);
+  const [isPanningEnabled, setIsPanningEnabled] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const panBaseRef = useRef({ x: 0, y: 0 });
   const [activeImageId, setActiveImageId] = useState(null);
@@ -376,6 +381,380 @@ export default function App() {
     return isNaN(savedIndex) ? 0 : savedIndex;
   });
 
+  //points layout
+  const [aiLoader, setAiLoader] = useState(false);
+  const [analyzedCriteria, setAnalyzedCriteria] = useState({
+    isAnalyzed: false,
+    analyzedData: null,
+  });
+  const [fileName, setFileName] = useState("");
+  const [points, setPoints] = useState([]);
+  const [cmInput, setCmInput] = useState("");
+  const [aiError, setAiError] = useState(null);
+  const [result, setResult] = useState(null);
+  const [showPointsPopup, setShowPointsPopup] = useState(false);
+  const canvasRef = useRef();
+  const s = {
+    popupContainer: {
+      background: "#fff",
+      borderRadius: 12,
+      width: 443,
+      minWidth: 443,
+      maxWidth: 443,
+      maxHeight: "calc(100vh - 80px)",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      position: "relative",
+    },
+
+    popupHeader: {
+      padding: "14px 20px",
+      background: "#16c60c",
+      color: "#fff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flex: "0 0 auto",
+    },
+
+    popupContent: {
+      padding: "18px 20px",
+      overflowY: "auto",
+      flex: "1 1 auto",
+    },
+
+    popupFooter: {
+      padding: "14px 20px",
+      borderTop: "1px solid #eee",
+      background: "#fff",
+      flex: "0 0 auto",
+    },
+
+    input: {
+      width: "100%",
+      boxSizing: "border-box",
+      padding: "9px 12px",
+      fontSize: 15,
+      border: "1px solid #ddd",
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+
+    btnRow: { display: "flex", gap: 10 },
+
+    btnPrimary: {
+      flex: 1,
+      padding: "9px 0",
+      background: "#00c400",
+      color: "#fff",
+      border: "none",
+      borderRadius: 8,
+      fontSize: 14,
+      cursor: "pointer",
+      fontWeight: 500,
+    },
+
+    btnSecondary: {
+      flex: 1,
+      padding: "9px 0",
+      background: "transparent",
+      color: "#555",
+      border: "1px solid #ddd",
+      borderRadius: 8,
+      fontSize: 14,
+      cursor: "pointer",
+    },
+
+    error: { color: "#dc2626", fontSize: 13, marginTop: 8 },
+    overlay: { position: "absolute", top: 0, left: 0, pointerEvents: "none" },
+
+    resultCard: {
+      marginTop: 20,
+      background: "#f8f9ff",
+      border: "1px solid #dbeafe",
+      borderRadius: 10,
+      padding: "16px 20px",
+    },
+
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: 500,
+      color: "#1e40af",
+      margin: "12px 0 8px",
+    },
+
+    metricGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(2,1fr)",
+      gap: 10,
+      marginBottom: 12,
+    },
+
+    metricCard: {
+      background: "#fff",
+      border: "1px solid #e5e7eb",
+      borderRadius: 8,
+      padding: "10px 14px",
+    },
+
+    metricLabel: { fontSize: 11, color: "#888", marginBottom: 3 },
+
+    metricValue: (size = 20) => ({
+      fontSize: size,
+      fontWeight: 500,
+    }),
+
+    coverageBarWrap: {
+      background: "#e5e7eb",
+      borderRadius: 6,
+      height: 10,
+      overflow: "hidden",
+      marginTop: 4,
+    },
+
+    coverageBarFill: (pct) => ({
+      width: `${Math.min(100, parseFloat(pct)).toFixed(1)}%`,
+      background: "#2563EB",
+      height: "100%",
+      borderRadius: 6,
+      transition: "width 0.4s ease",
+    }),
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fileName = params.get("file");
+
+    if (!fileName) return;
+
+    const decodedFileName = decodeURIComponent(fileName);
+    setFileName(decodedFileName);
+
+    const layouts = JSON.parse(localStorage.getItem("layouts") || "{}");
+
+    const layoutFile = layouts[decodedFileName];
+
+    if (!layoutFile) return;
+
+    setAnalyzedCriteria({
+      isAnalyzed: layoutFile?.ai_analyse || false,
+      analyzedData: layoutFile?.ai_analyse_result || null,
+    });
+
+  }, []);
+
+  const resetPoints = () => {
+    setPoints([]);
+    setShowPointsPopup(false);
+    setCmInput("");
+    setAiError(null);
+    const canvas = canvasRef.current;
+    if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleImgClick = (e) => {
+    if (isPanningEnabled) return;
+    if (points.length >= 2) return;
+
+    const rect = imageRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const newPoints = [...points, { x, y }];
+    setPoints(newPoints);
+    if (newPoints.length === 2) setTimeout(() => setShowPointsPopup(true), 150);
+  };
+
+  const drawOverlay = () => {
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+
+    canvas.width = img.offsetWidth;
+    canvas.height = img.offsetHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // dashed line between scale points
+    if (points.length === 2) {
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      ctx.lineTo(points[1].x, points[1].y);
+      ctx.strokeStyle = "#2563EB";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // numbered blue dot markers
+    points.forEach((p, i) => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = "#2563EB";
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(i + 1, p.x, p.y);
+    });
+  };
+
+  useEffect(() => { drawOverlay(); }, [points]);
+
+  const buildAnnotatedBase64 = () =>
+    new Promise((resolve) => {
+      const img = imageRef.current;
+      const offCanvas = document.createElement("canvas");
+      const scaleX = img.naturalWidth / img.offsetWidth;
+      const scaleY = img.naturalHeight / img.offsetHeight;
+      offCanvas.width = img.naturalWidth;
+      offCanvas.height = img.naturalHeight;
+      const ctx = offCanvas.getContext("2d");
+      const baseImg = new Image();
+      baseImg.onload = () => {
+        ctx.drawImage(baseImg, 0, 0, img.naturalWidth, img.naturalHeight);
+        const p1 = { x: points[0].x * scaleX, y: points[0].y * scaleY };
+        const p2 = { x: points[1].x * scaleX, y: points[1].y * scaleY };
+        const r = Math.max(10, Math.round(img.naturalWidth / 80));
+        [p1, p2].forEach((p, i) => {
+          ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = "#2563EB"; ctx.fill();
+          ctx.strokeStyle = "#fff"; ctx.lineWidth = r * 0.3; ctx.stroke();
+          ctx.fillStyle = "#fff"; ctx.font = `bold ${r * 1.2}px sans-serif`;
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText(i + 1, p.x, p.y);
+        });
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = "#2563EB"; ctx.lineWidth = r * 0.4;
+        ctx.setLineDash([r * 1.5, r]); ctx.stroke(); ctx.setLineDash([]);
+        resolve(offCanvas.toDataURL("image/png").split(",")[1]);
+      };
+      baseImg.src = image;
+    });
+
+  const analyzeWithClaude = async () => {
+    const cm = parseFloat(cmInput);
+    if (!cm || cm <= 0) { setAiError("Please enter a valid distance in cm."); return; }
+    setAiError(""); setAiLoader(true);
+    try {
+      const dx = points[0].x - points[1].x;
+      const dy = points[0].y - points[1].y;
+      const pixelDist = Math.sqrt(dx * dx + dy * dy);
+      const pixelsPerCm = pixelDist / cm;
+      const annotatedBase64 = await buildAnnotatedBase64();
+
+      const imgWidth = imageRef.current.offsetWidth;
+      const imgHeight = imageRef.current.offsetHeight;
+
+      const prompt =
+        `This is a floor plan image. I have marked two points (labeled 1 and 2) connected by a blue dashed line.
+                The real-world distance between point 1 and point 2 is ${cm} cm.
+                The pixel distance is ${pixelDist.toFixed(2)} pixels.
+                The displayed image size is ${imgWidth}px wide and ${imgHeight}px tall.
+                IMPORTANT SCALE RULE: 1 grid box = 10px (fixed).
+                Using that rule:
+                1. Count how many grid squares span between point 1 and point 2.
+                2. Compute cm_per_grid = ${cm} / grids_between_points
+                3. pixels_per_cm = 10 / cm_per_grid   (since 1 grid = 10px)
+                4. floor_plan_width_cm  = ${imgWidth}  / pixels_per_cm
+                5. floor_plan_height_cm = ${imgHeight} / pixels_per_cm
+                6. floor_plan_area_cm2  = floor_plan_width_cm * floor_plan_height_cm
+                7. floor_plan_area_m2   = floor_plan_area_cm2 / 10000
+                8. A standard light fixture covers roughly a circular area of radius 200cm (r=200cm).
+                   light_coverage_area_cm2 = Math.PI * 200 * 200
+                   light_coverage_area_m2  = light_coverage_area_cm2 / 10000
+                9. coverage_percent = (light_coverage_area_cm2 / floor_plan_area_cm2) * 100
+                Use THIS computed pixels_per_cm for all further calculations, NOT the raw pixel/cm ratio.
+                Respond ONLY as JSON, no markdown:
+                {
+                  "grids_between_points":<number|null>,
+                  "cm_per_grid":<number|null>,
+                  "pixels_per_grid":10,
+                  "pixels_per_cm":<computed from 10px/grid rule>,
+                  "light_fixture_size_px":<pixels_per_cm * 30>,
+                  "floor_plan_width_cm":<number>,
+                  "floor_plan_height_cm":<number>,
+                  "floor_plan_area_cm2":<number>,
+                  "floor_plan_area_m2":<number>,
+                  "light_coverage_area_cm2":<number>,
+                  "light_coverage_area_m2":<number>,
+                  "coverage_percent":<number>,
+                  "explanation":"<brief>"
+                }`;
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": CLAUDE_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-5",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: "image/png", data: annotatedBase64 } },
+              { type: "text", text: prompt },
+            ],
+          }],
+        }),
+      });
+
+      const data = await res.json();
+      const raw = data?.content?.[0]?.text || "";
+      const clean = raw.replace(/```json|```/g, "").trim();
+
+      console.log("Claude clean response ======>", clean);
+
+      let parsed;
+      try { parsed = JSON.parse(clean); }
+      catch {
+        parsed = {
+          pixels_per_cm: pixelsPerCm,
+          light_fixture_size_px: Math.round(pixelsPerCm * 30),
+          explanation: raw
+        };
+      }
+
+      setResult({ pixelDist: pixelDist.toFixed(1), cm, pixelsPerCm: pixelsPerCm.toFixed(2), ...parsed });
+      // setShowLightPicker(true);
+
+    } catch (err) {
+      setAiError("Claude API error: " + err.message);
+    } finally {
+      setAiLoader(false);
+    }
+  };
+
+  const completeAI = () => {
+    const layouts = JSON.parse(localStorage.getItem("layouts") || "{}");
+
+    const layoutFile = layouts[fileName];
+
+    layoutFile.ai_analyse = true;
+    layoutFile.ai_analyse_result = result;
+
+    layouts[fileName] = layoutFile;
+    localStorage.setItem("layouts", JSON.stringify(layouts));
+    resetPoints();
+    setAnalyzedCriteria({
+      isAnalyzed: true,
+      analyzedData: result,
+    });
+  };
+
+  // console.log("points =======>", points);
+
+
   // Get positions hook
   const [lightPlacementPositions, setLightPlacementPositions] = useState([]);
   const [pdfSideView, setPdfSideView] = useState([]);
@@ -398,7 +777,7 @@ export default function App() {
   selectedProductList.push(selectedProduct);
 
   //Get Current Light Key
-  console.log("current key", currentKey);
+  // console.log("current key", currentKey);
   useEffect(() => {
     if (Array.isArray(savedCombos) && savedCombos?.length > 0) {
       const allProducts = savedCombos || [];
@@ -572,15 +951,15 @@ export default function App() {
 
     setIsPanningEnabled(false);
     // if (data?.isApplied === false) {
-      toast("Select the Area where you want to upload the light!", {
-        id: "select-area-warning-1",
-        icon: "⚠️",
-        duration: 3000,
-        style: {
-          background: "#fff3cd",
-          color: "#856404",
-        },
-      });
+    toast("Select the Area where you want to upload the light!", {
+      id: "select-area-warning-1",
+      icon: "⚠️",
+      duration: 3000,
+      style: {
+        background: "#fff3cd",
+        color: "#856404",
+      },
+    });
     // }
   };
 
@@ -627,15 +1006,15 @@ export default function App() {
     setIsPanningEnabled(false);
 
     // if (updatedProduct?.isApplied === false) {
-      toast("Select the Area where you want to upload the light!", {
-        id: "select-area-warning-2",
-        icon: "⚠️",
-        duration: 3000,
-        style: {
-          background: "#fff3cd",
-          color: "#856404",
-        },
-      });
+    toast("Select the Area where you want to upload the light!", {
+      id: "select-area-warning-2",
+      icon: "⚠️",
+      duration: 3000,
+      style: {
+        background: "#fff3cd",
+        color: "#856404",
+      },
+    });
     // }
   };
 
@@ -1368,7 +1747,7 @@ export default function App() {
 
   useEffect(() => {
     const preventScrollAndZoom = (e) => {
-      if (e.target.closest(".sidebar-block-content")) {
+      if (e.target.closest(".sidebar-block-content") || e.target.closest(".orientation-popup-overlay")) {
         return;
       }
 
@@ -1435,10 +1814,8 @@ export default function App() {
     };
   };
 
-  console.log("~~~~~~~~~~~", currentKey, actualBox);
-
   const placeLightsInSelection = () => {
-    console.log(currentKey);
+    //console.log(currentKey);
     if (!currentKey) {
       toast.error("Please Select the Lighting First!");
       setShowPopup(false);
@@ -1457,7 +1834,7 @@ export default function App() {
     };
     const data = calculateLights(finalBox);
 
-    console.log("**********", x, y, width, height, data);
+    // console.log("**********", x, y, width, height, data);
 
     const products = JSON.parse(localStorage.getItem("savedCombos")) || [];
 
@@ -1480,8 +1857,8 @@ export default function App() {
 
           productData: {
             ...item.productData,
-            width: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightWidth)/2) : data?.lightWidth,
-            height: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightHeight)/2) : data?.lightHeight,
+            width: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightWidth) / 2) : data?.lightWidth,
+            height: (item?.productData?.imageUrl === null || item?.productData?.imageUrl === undefined) ? Number((data?.lightHeight) / 2) : data?.lightHeight,
             isApplied: true,
           },
         };
@@ -1519,7 +1896,7 @@ export default function App() {
   // console.log("________________", isShown);
 
   return (
-    <div>
+    <div style={{ overflow: "hidden" }}>
 
       {/* <Toaster
         position="top-center"
@@ -1549,8 +1926,11 @@ export default function App() {
         </div>
       </div>
 
-      <div className="row">
-        <div className="col-md-4"></div>
+      <div className={analyzedCriteria?.isAnalyzed ? "row" : "d-flex justify-content-center align-items-center"}>
+        {analyzedCriteria?.isAnalyzed && (
+          <div className="col-md-4"></div>
+        )}
+
         <div className="col-md-6">
           <div className="controls-container">
             {/* Grid Toggle Button */}
@@ -1619,15 +1999,15 @@ export default function App() {
                 <div className="steps-wrap">
                   <div className="step-item">
                     <div className="step-badge">1.</div>
-                    <span className="step-label">Select a light from the left panel</span>
+                    <span className="step-label">Mark two reference points on the floor plan to define a known distance</span>
                   </div>
                   <div className="step-item">
                     <div className="step-badge">2.</div>
-                    <span className="step-label">Click and drag on the floorplan to select an area</span>
+                    <span className="step-label">Enter the real-world distance (in cm) between the selected points to let the <strong>AI analyze</strong> the scale</span>
                   </div>
                   <div className="step-item">
                     <div className="step-badge">3.</div>
-                    <span className="step-label">Click <strong>Apply</strong> in the popup to place the lights</span>
+                    <span className="step-label">Choose a light from the panel and place it accurately on the analyzed floor plan</span>
                   </div>
                 </div>
               </div>
@@ -1850,6 +2230,7 @@ export default function App() {
                       onLoad={() => {
                         console.log("Image loaded successfully");
                         if (imageRef.current) {
+                          drawOverlay();
                           // Image dimensions are handled by the useEffect hook
                         }
                       }}
@@ -1859,11 +2240,17 @@ export default function App() {
                         console.error("Image src type:", image ? (image.startsWith("data:") ? "data URL" : image.startsWith("blob:") ? "blob URL" : "other") : "null");
                         setError("Failed to load image. Please check the console for details.");
                       }}
+                      onClick={(e) => {
+                        if (isPanningEnabled) return
+                        handleImgClick(e);
+                      }}
                     />
 
-                    {console.log("^^^^^%%%",finalSelection, selectionBox, finalSelection)}
+                    <canvas ref={canvasRef} style={s.overlay} />
 
-                    {(selectionBox || finalSelection) && !isPanningEnabled && isShown && currentKey !==null && (actualBox !==null && actualBox?.height > 0 && actualBox?.width > 0) && (
+                    {/* {console.log("^^^^^%%%", finalSelection, selectionBox, finalSelection)} */}
+
+                    {(selectionBox || finalSelection) && !isPanningEnabled && isShown && currentKey !== null && (actualBox !== null && actualBox?.height > 0 && actualBox?.width > 0) && (
                       <div
                         style={{
                           position: "absolute",
@@ -2543,7 +2930,7 @@ export default function App() {
             </div>
           </div>
 
-          {showPopup && finalSelection && isShown && currentKey !== null && (actualBox !==null && actualBox?.height > 0 && actualBox?.width > 0) && (
+          {showPopup && finalSelection && isShown && currentKey !== null && (actualBox !== null && actualBox?.height > 0 && actualBox?.width > 0) && (
             <div
               style={{
                 position: "fixed",
@@ -2664,7 +3051,7 @@ export default function App() {
           )}
         </div>
         <>
-          <div className="col-md-4 sidebar-open sidebar-block-area">
+          <div style={{ display: !analyzedCriteria?.isAnalyzed ? "none" : "" }} className="col-md-4 sidebar-open sidebar-block-area">
             <Sidebar
               contentClassName="contentClassName11"
               overlayClassName="overlayClassName11"
@@ -2726,10 +3113,122 @@ export default function App() {
                 },
               }}
               pullRight={false}
-            />
+            >
+              <div />
+            </Sidebar>
           </div>
         </>
       </div>
+
+      {/* AI Analyse Popup */}
+      {showPointsPopup && (
+        <div className="orientation-popup-overlay">
+          <div style={s.popupContainer} onClick={(e) => e.stopPropagation()}>
+
+            <div style={s.popupHeader}>
+              <h3 style={{ margin: 0 }}>Enter real-world distance</h3>
+              <button
+                onClick={() => { resetPoints(); setShowPointsPopup(false); }}
+                style={{ background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer" }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* SCROLLABLE CONTENT */}
+            <div style={s.popupContent}>
+              <h5 className="mb-4">
+                What is the actual distance between the two points you clicked?
+              </h5>
+
+              <input
+                style={s.input}
+                type="number"
+                min="0.1"
+                step="0.1"
+                placeholder="Distance in cm (e.g. 300)"
+                value={cmInput}
+                onChange={(e) => { setCmInput(e.target.value); setAiError(null); }}
+                disabled={result != null}
+                onWheel={(e) => e.target.blur()}
+                onKeyDown={(e) => e.key === " " && e.preventDefault()}
+                autoFocus
+              />
+
+              {aiError && <p style={s.error}>{aiError}</p>}
+
+              {result && (
+                <div style={s.resultCard}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#1e40af", marginBottom: 12 }}>
+                    Scale analysis results
+                  </div>
+
+                  <div style={s.metricGrid}>
+                    {[
+                      ["Pixels / cm", parseFloat(result.pixelsPerCm).toFixed(1)],
+                      ["Pixel distance", `${result.pixelDist} px`],
+                      ["Real distance", `${result.cm} cm`],
+                    ].map(([label, val]) => (
+                      <div key={label} style={s.metricCard}>
+                        <div style={s.metricLabel}>{label}</div>
+                        <div style={s.metricValue()}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {result.floor_plan_area_m2 != null && (
+                    <>
+                      <div style={s.sectionLabel}>Floor plan area & light coverage</div>
+
+                      <div style={s.metricGrid}>
+                        {[
+                          ["Floor width", `${(result.floor_plan_width_cm / 100).toFixed(2)} m`],
+                          ["Floor height", `${(result.floor_plan_height_cm / 100).toFixed(2)} m`],
+                          ["Total floor area", `${result.floor_plan_area_m2.toFixed(2)} m²`],
+                        ].map(([label, val]) => (
+                          <div key={label} style={s.metricCard}>
+                            <div style={s.metricLabel}>{label}</div>
+                            <div style={s.metricValue(18)}>{val}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>
+                        Coverage of 1 light fixture on this floor plan
+                      </div>
+
+                      <div style={s.coverageBarWrap}>
+                        <div style={s.coverageBarFill(result.coverage_percent)} />
+                      </div> */}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* FOOTER (fixed) */}
+            <div style={s.popupFooter}>
+              {result ?
+                <div style={s.btnRow}>
+                  <button style={s.btnPrimary} onClick={completeAI}>
+                    Move to Light Placements
+                  </button>
+                </div>
+                :
+                <div style={s.btnRow}>
+                  <button style={s.btnSecondary} onClick={() => { resetPoints(); setShowPointsPopup(false); }}>
+                    Cancel
+                  </button>
+                  <button style={s.btnPrimary} onClick={analyzeWithClaude}>
+                    {aiLoader ? "Analyzing..." : "Analyze"}
+                  </button>
+                </div>
+              }
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Orientation Selection Popup */}
       {showOrientationPopup && (

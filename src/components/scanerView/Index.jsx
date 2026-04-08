@@ -25,9 +25,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import editIcon from "../../assets/img/edit.svg";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
-import Homepage from "../homepage/Index.jsx";
+import Homepage from "../homepage/Homepage";
 import Joyride, { ACTIONS, EVENTS, STATUS } from "react-joyride";
-import Icon from "@mdi/react";
+import { Icon } from "@mdi/react";
 import { mdiDownload } from "@mdi/js";
 import { mdiPrinter } from "@mdi/js";
 import { jsPDF } from "jspdf";
@@ -207,6 +207,8 @@ const ScanerView = () => {
           lightPlacementPositions: [],
           estimate: layouts[name]?.estimate || 0,
           editedImage: null,
+          ai_analyse: false,
+          ai_analyse_result: null,
         };
 
         if (file.type === "application/pdf") {
@@ -223,8 +225,7 @@ const ScanerView = () => {
             layouts[name] = {
               ...(layouts[name] || {}),
               editedImage: reader.result,
-              lightPlacementPositions:
-                layouts[name]?.lightPlacementPositions || [],
+              lightPlacementPositions: layouts[name]?.lightPlacementPositions || [],
               estimate: layouts[name].estimate || 0.0,
             };
 
@@ -410,10 +411,19 @@ const ScanerView = () => {
   // Handle file deletion
   const handleDeleteFile = async (fileName) => {
     try {
+      const layouts = JSON.parse(localStorage.getItem("layouts") || "{}");
+
       await deleteMainFile(fileName);
+
+      if (layouts[fileName]) {
+        delete layouts[fileName];
+        localStorage.setItem("layouts", JSON.stringify(layouts));
+      }
+
       setSelectedFiles((prevFiles) =>
         prevFiles.filter((file) => file.name !== fileName)
       );
+
     } catch (error) {
       console.error("Error deleting file:", error);
     }
@@ -907,7 +917,7 @@ const ScanerView = () => {
 
               <div className="greenhsce-content-block">
                 <div className="greenhsce-content-text">
-                  <div class="upload-text">
+                  <div className="upload-text">
                     <p>Upload your single - or multi-floor floorplan (PDF, JPG, or PNG) to start your lighting design and estimate</p>
                     <p>DISCLAIMER: All measurements and lighting positions will still need to be verified by your installer. Greenhouse is not responsible for any errors or inaccuracies</p>
                   </div>
@@ -917,7 +927,7 @@ const ScanerView = () => {
                 </div>
               </div>
 
-              
+
               <div className="heading-scan-view">
                 <p>Estimated floor plannings</p>
               </div>
@@ -936,9 +946,8 @@ const ScanerView = () => {
                 {!loadingFiles && selectedFiles && selectedFiles.length > 0 && (
                   <div className="file-upload-block row">
                     {selectedFiles.map((file, index) => (
-                      <>
+                      <React.Fragment key={index}>
                         <div
-                          key={index}
                           className="card upload-file-block-custom col-lg-4 col-md-6 col-sm-12"
                         >
                           <div className="card-body upload-file-block">
@@ -1023,7 +1032,7 @@ const ScanerView = () => {
                             </div>
                           </div>
                         </div>
-                      </>
+                      </React.Fragment>
                     ))}
                   </div>
                 )}

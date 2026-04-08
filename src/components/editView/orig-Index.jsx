@@ -33,7 +33,7 @@ import FourCircles, {
   EightCircles,
   TwoCircles,
 } from "../groupOfCircle/Index.js";
-import { OldSpinnerLoader } from "../../loader/Index.js";
+import { OldSpinnerLoader } from "../../loader/Index.jsx";
 import grids from "../../assets/img/gridlines.svg";
 import greeHseSVG from "../../assets/img/greenhseicon.svg";
 
