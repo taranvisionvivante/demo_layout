@@ -639,6 +639,23 @@ export default function App() {
       baseImg.src = image;
     });
 
+  const extractJSONObject = (text) => {
+    const firstBrace = text.indexOf("{");
+    if (firstBrace === -1) return null;
+
+    let braceCount = 0;
+    for (let i = firstBrace; i < text.length; i++) {
+      if (text[i] === "{") braceCount++;
+      if (text[i] === "}") braceCount--;
+
+      if (braceCount === 0) {
+        const jsonString = text.slice(firstBrace, i + 1);
+        return jsonString;
+      }
+    }
+    return null;
+  };
+
   const analyzeWithClaude = async () => {
     const cm = parseFloat(cmInput);
     if (!cm || cm <= 0) { setAiError("Please enter a valid distance in cm."); return; }
@@ -790,10 +807,12 @@ export default function App() {
       const raw = data?.content?.[0]?.text || "";
       const clean = raw.replace(/```json|```/g, "").trim();
 
-      console.log("Claude clean response ======>", clean);
+      const jsonString = extractJSONObject(clean);
+
+      console.log("Claude clean response ======>", jsonString);
 
       let parsed;
-      try { parsed = JSON.parse(clean); }
+      try { parsed = JSON.parse(jsonString); }
       catch {
         parsed = {
           pixels_per_cm: pixelsPerCm,
@@ -2090,7 +2109,7 @@ export default function App() {
                   </div>
                   <div className="step-item">
                     <div className="step-badge">2.</div>
-                    <span className="step-label">Enter the real-world distance (in cm) between the selected points to let the <strong>AI analyze</strong> the scale</span>
+                    <span className="step-label">Enter the real-world distance (in cm) between the selected points to let <strong>analyze</strong> the floor plan</span>
                   </div>
                   <div className="step-item">
                     <div className="step-badge">3.</div>
@@ -3336,7 +3355,7 @@ export default function App() {
                     {aiLoader ? "Analyzing..." : "Analyze"}
                   </button>
                 </div>
-              } */}
+              }  */}
 
             </div>
 

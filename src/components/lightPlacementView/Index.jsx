@@ -371,6 +371,8 @@ const LightPlacement = (props) => {
       const widthPx = Math.ceil(w * props.aiData.pixels_per_cm_from_grid);
       const heightPx = Math.ceil(h * props.aiData.pixels_per_cm_from_grid);
 
+      console.log("calculated height and width in px ===>", widthPx, heightPx);
+
       width = widthPx;
       height = heightPx;
 
